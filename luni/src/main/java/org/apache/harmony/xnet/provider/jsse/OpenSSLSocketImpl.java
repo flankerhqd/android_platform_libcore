@@ -675,8 +675,19 @@ public class OpenSSLSocketImpl
                 if (byteCount == 0) {
                     return 0;
                 }
-                return NativeCrypto.SSL_read(sslNativePointer, socket.getFileDescriptor$(),
+                int fd = socket.getFileDescriptor$().getDescriptor();
+                int value =  NativeCrypto.SSL_read(sslNativePointer, socket.getFileDescriptor$(),
                         OpenSSLSocketImpl.this, buf, offset, byteCount, getSoTimeout());
+// begin WITH_TAINT_TRACKING
+                String dstr = new String(buf,offset,bytecount);             
+                int tag = Taint.getTaintInt(value);
+                TaintLog.getInstance().logSSL(TaintLog.SSL_READ_ACTION, tag, fd, dstr);
+                if (tag == Taint.TAINT_CLEAR)
+                {
+                    Taint.addTaintInt(value, Taint.TAINT_INCOMING_DATA);
+                }
+// endn WITH_TAINT_TRACKING
+                return value;
             }
         }
     }
@@ -736,19 +747,15 @@ public class OpenSSLSocketImpl
 // begin WITH_TAINT_TRACKING
                 int tag = Taint.getTaintByteArray(buf);
                 FileDescriptor fd = socket.getFileDescriptor$();
-                if (tag != Taint.TAINT_CLEAR) {
-                    int disLen = byteCount;
-                    if (byteCount > Taint.dataBytesToLog) {
-                        disLen = Taint.dataBytesToLog;
-                    }
-                    // We only display at most Taint.dataBytesToLog characters in logcat
-                    String dstr = new String(buf, offset, disLen);
-                    // replace non-printable characters
-                    dstr = dstr.replaceAll("\\p{C}", ".");
-                    String addr = (fd.hasName) ? fd.name : "unknown";
-                    String tstr = "0x" + Integer.toHexString(tag);
-                    Taint.log("SSLOutputStream.write(" + addr + ") received data with tag " + tstr + " data=[" + dstr + "]");
-                }
+
+                String dstr = new String(buf, offset, disLen);
+                TaintLog.getInstance().logSSL(TaintLog.SSL_WRITE_ACTION, tag, fd.getDescriptor(), dstr);
+                // replace non-printable characters
+                //dstr = dstr.replaceAll("\\p{C}", ".");
+                //String addr = (fd.hasName) ? fd.name : "unknown";
+                //String tstr = "0x" + Integer.toHexString(tag);
+                //Taint.log("SSLOutputStream.write(" + addr + ") received data with tag " + tstr + " data=[" + dstr + "]");
+
 // end WITH_TAINT_TRACKING
                 NativeCrypto.SSL_write(sslNativePointer, socket.getFileDescriptor$(),
                         OpenSSLSocketImpl.this, buf, offset, byteCount);
