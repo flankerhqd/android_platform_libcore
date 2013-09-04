@@ -27,9 +27,13 @@ import libcore.util.MutableLong;
 
 // begin WITH_TAINT_TRACKING
 import dalvik.system.Taint;
+import dalvik.system.TaintLog;
 // end WITH_TAINT_TRACKING
 
 public final class Posix implements Os {
+    //begin WITH_TAINT_TRACKING
+    private int taintLogId;
+    //end WITH_TAINT_TRACKING
     Posix() { }
 
     public native FileDescriptor accept(FileDescriptor fd, InetSocketAddress peerAddress) throws ErrnoException;
@@ -46,6 +50,10 @@ public final class Posix implements Os {
              fd.hasName = true;
              fd.name = addr;
     	}
+        if(port != 0)
+	{
+	     fd.port = port;
+        }
         connectImpl(fd, address, port);
     }
 // end WITH_TAINT_TRACKING

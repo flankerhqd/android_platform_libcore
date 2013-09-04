@@ -1661,7 +1661,19 @@ outer:
     public static String valueOf(char value) {
         String s;
         if (value < 128) {
-            s = new String(value, 1, ASCII);
+            // begin WITH_TAINT_TRACKING
+            int aTag = Taint.getTaintChar(value);
+            if (aTag != Taint.TAINT_CLEAR)
+            {
+                char[] aTempAscii = ASCII;
+                Taint.addTaintCharArray(aTempAscii, aTag);
+                s = new String(value, 1, aTempAscii);
+            }
+            else // tag == Taint.TAINT_CLEAR
+            {
+                s = new String(value, 1, ASCII);
+            }
+            // end WITH_TAINT_TRACKING 
         } else {
             s = new String(0, 1, new char[] { value });
         }

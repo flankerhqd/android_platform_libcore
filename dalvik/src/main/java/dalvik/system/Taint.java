@@ -20,6 +20,13 @@
 package dalvik.system;
 
 import java.nio.ByteBuffer;
+import java.io.FileDescriptor;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.text.SimpleDateFormat;
+import org.json.JSONException;
+import org.json.JSONStringer;
 
 /**
  * Provides a Taint interface for the Dalvik VM. This class is used for
@@ -45,6 +52,9 @@ public final class Taint {
     public static final int TAINT_DEVICE_SN     = 0x00002000;
     public static final int TAINT_ACCOUNT       = 0x00004000;
     public static final int TAINT_HISTORY       = 0x00008000;
+    public static final int TAINT_INCOMING_DATA = 0x00010000;
+    public static final int TAINT_USER_INPUT    = 0x00020000;    
+    public static final int TAINT_MEDIA         = 0x00040000;
     
     // how many bytes of tainted network output data to print to log?
     public static final int dataBytesToLog = 100;
@@ -60,6 +70,16 @@ public final class Taint {
     native public static void addTaintString(String str, int tag);
     
     /**
+     * Updates the target CharSequence's taint tag.
+     *
+     * @param cs
+     *	    the target CharSequence
+     * @param tag
+     *	    tag to update (bitwise or) onto the object
+     */
+    native public static void addTaintCharSequence(CharSequence cs, int tag);
+
+    /**
      * Updates the target Object array's taint tag.
      *
      * @param array
@@ -67,6 +87,7 @@ public final class Taint {
      * @param tag
      *	    tag to update (bitwise or) onto the object array
      */
+
     native public static void addTaintObjectArray(Object[] array, int tag);
 
     /**
@@ -268,6 +289,15 @@ public final class Taint {
      */
     native public static int getTaintString(String str);
 
+     /**
+     * Get the current taint tag from a CharSequence.
+     *
+     * @param cs
+     *	    the target CharSequence
+     * @return the taint tag
+     */
+    native public static int getTaintCharSequence(CharSequence cs);
+
     /**
      * Get the current taint tag from an Object array.
      *
@@ -463,31 +493,5 @@ public final class Taint {
      *	    the tag to add (bitwise or) to the file
      */
     native public static void addTaintFile(int fd, int tag);
-
-    /**
-     * Logging utility accessible from places android.util.Log
-     * is not.
-     *
-     * @param msg
-     *	    the message to log
-     */
-    native public static void log(String msg);
-
-
-    /**
-     * Logging utility to obtain the file path for a file descriptor
-     *
-     * @param fd
-     *	    the file descriptor
-     */
-    native public static void logPathFromFd(int fd);
-
-    /**
-     * Logging utility to obtain the peer IP addr for a file descriptor
-     *
-     * @param fd
-     *	    the file descriptor
-     */
-    native public static void logPeerFromFd(int fd);
 }
 

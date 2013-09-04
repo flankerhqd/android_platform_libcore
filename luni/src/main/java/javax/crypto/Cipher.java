@@ -35,6 +35,11 @@ import java.util.Set;
 import org.apache.harmony.crypto.internal.NullCipherSpi;
 import org.apache.harmony.security.fortress.Engine;
 
+// begin WITH_TAINT_TRACKING
+import dalvik.system.TaintLog;
+import java.util.Random;
+// end WITH_TAINT_TRACKING
+
 /**
  * This class provides access to implementations of cryptographic ciphers for
  * encryption and decryption. Cipher classes can not be instantiated directly,
@@ -125,6 +130,10 @@ public class Cipher {
 
     private static SecureRandom secureRandom;
 
+    // begin WITH_TAINT_TRACKING
+    private int taintLogId;
+    // end WITH_TAINT_TRACKING
+
     /**
      * Creates a new Cipher instance.
      *
@@ -149,6 +158,11 @@ public class Cipher {
         this.provider = provider;
         this.transformation = transformation;
         this.spiImpl = cipherSpi;
+
+// begin WITH_TAINT_TRACKING
+        Random aRandomGen = new Random();
+        this.taintLogId = aRandomGen.nextInt();        
+// end WITH_TAINT_TRACKING
     }
 
     /**
@@ -518,6 +532,9 @@ public class Cipher {
         //        (jurisdiction policy files)
         spiImpl.engineInit(opmode, key, random);
         mode = opmode;
+// begin WITH_TAINT_TRACKING
+        TaintLog.getInstance().logCipherUsage("init", this.taintLogId, this.mode, null, null);
+// end WITH_TAINT_TRACKING
     }
 
     private void checkMode(int mode) {
@@ -615,6 +632,9 @@ public class Cipher {
         //        (jurisdiction policy files)
         spiImpl.engineInit(opmode, key, params, random);
         mode = opmode;
+// begin WITH_TAINT_TRACKING
+        TaintLog.getInstance().logCipherUsage("init", this.taintLogId, this.mode, null, null);
+// end WITH_TAINT_TRACKING
     }
 
     /**
@@ -706,6 +726,10 @@ public class Cipher {
         //        (jurisdiction policy files)
         spiImpl.engineInit(opmode, key, params, random);
         mode = opmode;
+
+// begin WITH_TAINT_TRACKING
+        TaintLog.getInstance().logCipherUsage("init", this.taintLogId, this.mode, null, null);
+// end WITH_TAINT_TRACKING
     }
 
     /**
@@ -830,6 +854,9 @@ public class Cipher {
         //        (jurisdiction policy files)
         spiImpl.engineInit(opmode, certificate.getPublicKey(), random);
         mode = opmode;
+// begin WITH_TAINT_TRACKING
+        TaintLog.getInstance().logCipherUsage("init", this.taintLogId, this.mode, null, null);
+// end WITH_TAINT_TRACKING
     }
 
     /**
@@ -856,7 +883,11 @@ public class Cipher {
         if (input.length == 0) {
             return null;
         }
-        return spiImpl.engineUpdate(input, 0, input.length);
+// begin WITH_TAINT_TRACKING
+        byte[] aOutput = spiImpl.engineUpdate(input, 0, input.length);
+        TaintLog.getInstance().logCipherUsage("update", this.taintLogId, this.mode, input, aOutput);
+        return aOutput;
+// end WITH_TAINT_TRACKING
     }
 
     /**
@@ -890,7 +921,13 @@ public class Cipher {
         if (input.length == 0) {
             return null;
         }
-        return spiImpl.engineUpdate(input, inputOffset, inputLen);
+// begin WITH_TAINT_TRACKING
+        byte[] aOutput = spiImpl.engineUpdate(input, inputOffset, inputLen);
+        byte[] aInput = new byte[inputLen];
+        System.arraycopy(input, inputOffset, aInput, 0, inputLen);
+        TaintLog.getInstance().logCipherUsage("update", this.taintLogId, this.mode, aInput, aOutput);
+        return aOutput;
+// end WITH_TAINT_TRACKING
     }
 
     private static void checkInputOffsetAndCount(int inputArrayLength,
@@ -986,8 +1023,16 @@ public class Cipher {
         if (input.length == 0) {
             return 0;
         }
-        return spiImpl.engineUpdate(input, inputOffset, inputLen, output,
-                outputOffset);
+        // begin WITH_TAINT_TRACKING
+        int aRetval = spiImpl.engineUpdate(input, inputOffset, inputLen, output,
+                 outputOffset);
+        byte[] aInput = new byte[inputLen];
+        byte[] aOutput = new byte[aRetval];
+        System.arraycopy(input, inputOffset, aInput, 0, inputLen);
+        System.arraycopy(output, outputOffset, aOutput, 0, aRetval);
+        TaintLog.getInstance().logCipherUsage("update", this.taintLogId, this.mode, aInput, aOutput);
+        return aRetval;
+// end WITH_TAINT_TRACKING
     }
 
     /**
@@ -1022,7 +1067,15 @@ public class Cipher {
         if (input == output) {
             throw new IllegalArgumentException("input == output");
         }
-        return spiImpl.engineUpdate(input, output);
+        // begin WITH_TAINT_TRACKING
+        int aRetval = spiImpl.engineUpdate(input, output);
+        byte[] aInput = new byte[input.capacity()];
+        byte[] aOutput = new byte[aRetval];
+        input.get(aInput, 0, aInput.length);
+        output.get(aOutput, 0, aOutput.length);
+        TaintLog.getInstance().logCipherUsage("update", this.taintLogId, this.mode, aInput, aOutput);
+        return aRetval;
+// end WITH_TAINT_TRACKING
     }
 
     /**
@@ -1046,7 +1099,11 @@ public class Cipher {
         if (mode != ENCRYPT_MODE && mode != DECRYPT_MODE) {
             throw new IllegalStateException();
         }
-        return spiImpl.engineDoFinal(null, 0, 0);
+// begin WITH_TAINT_TRACKING
+        byte[] aOutput = spiImpl.engineDoFinal(null, 0, 0);
+        TaintLog.getInstance().logCipherUsage("doFinal", this.taintLogId, this.mode, null, aOutput);
+        return aOutput;
+// end WITH_TAINT_TRACKING
     }
 
     /**
@@ -1082,7 +1139,13 @@ public class Cipher {
         if (outputOffset < 0) {
             throw new IllegalArgumentException("outputOffset < 0. outputOffset=" + outputOffset);
         }
-        return spiImpl.engineDoFinal(null, 0, 0, output, outputOffset);
+// begin WITH_TAINT_TRACKING
+        int aRetval = spiImpl.engineDoFinal(null, 0, 0, output, outputOffset);
+        byte[] aOutput = new byte[aRetval];
+        System.arraycopy(output, outputOffset, aOutput, 0, aRetval);
+        TaintLog.getInstance().logCipherUsage("doFinal", this.taintLogId, this.mode, null, aOutput);
+        return aRetval;
+// end WITH_TAINT_TRACKING
     }
 
     /**
@@ -1108,7 +1171,11 @@ public class Cipher {
         if (mode != ENCRYPT_MODE && mode != DECRYPT_MODE) {
             throw new IllegalStateException();
         }
-        return spiImpl.engineDoFinal(input, 0, input.length);
+// begin WITH_TAINT_TRACKING
+        byte[] aOutput = spiImpl.engineDoFinal(input, 0, input.length);
+        TaintLog.getInstance().logCipherUsage("doFinal", this.taintLogId, this.mode, input, aOutput);
+        return aOutput;
+// end WITH_TAINT_TRACKING
     }
 
     /**
@@ -1143,7 +1210,13 @@ public class Cipher {
             throw new IllegalStateException();
         }
         checkInputOffsetAndCount(input.length, inputOffset, inputLen);
-        return spiImpl.engineDoFinal(input, inputOffset, inputLen);
+// begin WITH_TAINT_TRACKING
+        byte[] aOutput = spiImpl.engineDoFinal(input, inputOffset, inputLen);
+        byte[] aInput = new byte[inputLen];
+        System.arraycopy(input, inputOffset, aInput, 0, inputLen);
+        TaintLog.getInstance().logCipherUsage("doFinal", this.taintLogId, this.mode, aInput, aOutput);
+        return aOutput;
+// end WITH_TAINT_TRACKING
     }
 
     /**
@@ -1221,8 +1294,16 @@ public class Cipher {
             throw new IllegalStateException();
         }
         checkInputOffsetAndCount(input.length, inputOffset, inputLen);
-        return spiImpl.engineDoFinal(input, inputOffset, inputLen, output,
-                outputOffset);
+// begin WITH_TAINT_TRACKING
+        int aRetval = spiImpl.engineDoFinal(input, inputOffset, inputLen, output,
+                 outputOffset);
+        byte[] aInput = new byte[inputLen];
+        byte[] aOutput = new byte[aRetval];
+        System.arraycopy(input, inputOffset, aInput, 0, inputLen);
+        System.arraycopy(output, outputOffset, aOutput, 0, aRetval);
+        TaintLog.getInstance().logCipherUsage("doFinal", this.taintLogId, this.mode, aInput, aOutput);
+        return aRetval;
+// end WITH_TAINT_TRACKING
     }
 
     /**
@@ -1261,7 +1342,15 @@ public class Cipher {
         if (input == output) {
             throw new IllegalArgumentException("input == output");
         }
-        return spiImpl.engineDoFinal(input, output);
+// begin WITH_TAINT_TRACKING
+        int aRetval = spiImpl.engineDoFinal(input, output);
+        byte[] aInput = new byte[input.capacity()];
+        byte[] aOutput = new byte[aRetval];
+        input.get(aInput, 0, aInput.length);
+        output.get(aOutput, 0, aOutput.length);
+        TaintLog.getInstance().logCipherUsage("doFinal", this.taintLogId, this.mode, aInput, aOutput);
+        return aRetval;
+// end WITH_TAINT_TRACKING
     }
 
     /**
