@@ -676,8 +676,8 @@ public class OpenSSLSocketImpl
                 if (byteCount == 0) {
                     return 0;
                 }
-                int fd = socket.getFileDescriptor$().getDescriptor();
-                int value =  NativeCrypto.SSL_read(sslNativePointer, socket.getFileDescriptor$(),
+                int fd = socket.getFileDescriptor$();
+                int value =  NativeCrypto.SSL_read(sslNativePointer, fd,
                         OpenSSLSocketImpl.this, buf, offset, byteCount, getSoTimeout());
 // begin WITH_TAINT_TRACKING
                 String dstr = new String(buf,offset,byteCount);             
@@ -752,7 +752,7 @@ public class OpenSSLSocketImpl
                 FileDescriptor fd = socket.getFileDescriptor$();
 
                 String dstr = new String(buf, offset, byteCount);
-                TaintLog.getInstance().logSSL(TaintLog.SSL_WRITE_ACTION, tag, fd.getDescriptor(), dstr);
+                TaintLog.getInstance().logSSL(TaintLog.SSL_WRITE_ACTION, tag, fd, dstr);
                 // replace non-printable characters
                 //dstr = dstr.replaceAll("\\p{C}", ".");
                 //String addr = (fd.hasName) ? fd.name : "unknown";
@@ -760,7 +760,7 @@ public class OpenSSLSocketImpl
                 //Taint.log("SSLOutputStream.write(" + addr + ") received data with tag " + tstr + " data=[" + dstr + "]");
 
 // end WITH_TAINT_TRACKING
-                NativeCrypto.SSL_write(sslNativePointer, socket.getFileDescriptor$(),
+                NativeCrypto.SSL_write(sslNativePointer, fd,
                         OpenSSLSocketImpl.this, buf, offset, byteCount);
             }
         }
