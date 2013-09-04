@@ -28,6 +28,7 @@ import libcore.util.MutableLong;
 // begin WITH_TAINT_TRACKING
 import dalvik.system.Taint;
 import dalvik.system.TaintLog;
+import java.util.Random;
 // end WITH_TAINT_TRACKING
 
 public final class Posix implements Os {
@@ -254,9 +255,6 @@ public final class Posix implements Os {
         }
     }
     public int recvfrom(FileDescriptor fd, byte[] bytes, int byteOffset, int byteCount, int flags, InetSocketAddress srcAddress) throws ErrnoException {
-        String addr = (fd.hasName) ? fd.name : "unknown";
-        String dstr = new String(data);
-        TaintLog.getInstance().logNetworkAction(TaintLog.NET_RECV_ACTION, tag, addr, fd.port, taintLogId, dstr);
         // This indirection isn't strictly necessary, but ensures that our public interface is type safe.
         return recvfromBytes(fd, bytes, byteOffset, byteCount, flags, srcAddress);
     }
@@ -270,12 +268,12 @@ public final class Posix implements Os {
         int bytesRead = recvfromBytesImpl(fd,buffer,byteOffset,byteCount,flags,srcAddress);
         if (buffer instanceof byte[]) {
             String dstr = new String((byte[]) buffer);
-            int tag = Taint.getTaintByteArray(data);
+            int tag = Taint.getTaintByteArray((byte[])buffer);
             String addr = (fd.hasName) ? fd.name : "unknown";
             TaintLog.getInstance().logNetworkAction(TaintLog.NET_RECV_ACTION, tag, addr, fd.port, taintLogId, dstr);
             if (tag == Taint.TAINT_CLEAR)
             {
-                Taint.addTaintByteArray(data, Taint.TAINT_INCOMING_DATA);
+                Taint.addTaintByteArray((byte[])buffer, Taint.TAINT_INCOMING_DATA);
             }
         }
         return bytesRead;
@@ -350,9 +348,9 @@ public final class Posix implements Os {
     public int write(FileDescriptor fd, ByteBuffer buffer) throws ErrnoException {
         if (buffer.isDirect()) {
 // begin WITH_TAINT_TRACKING
-            /*
             int tag = buffer.getDirectByteBufferTaint();
             int fdInt = fd.getDescriptor();
+            /*
             Taint.logPathFromFd(fdInt);
             String tstr = "0x" + Integer.toHexString(tag);
             Taint.log("libcore.os.write(" + fdInt + ") writing a direct ByteBuffer with tag " + tstr);

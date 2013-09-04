@@ -46,6 +46,7 @@ import libcore.io.Streams;
 import org.apache.harmony.security.provider.cert.X509CertImpl;
 // begin WITH_TAINT_TRACKING
 import dalvik.system.Taint;
+import dalvik.system.TaintLog;
 // end WITH_TAINT_TRACKING
 
 /**
@@ -679,7 +680,7 @@ public class OpenSSLSocketImpl
                 int value =  NativeCrypto.SSL_read(sslNativePointer, socket.getFileDescriptor$(),
                         OpenSSLSocketImpl.this, buf, offset, byteCount, getSoTimeout());
 // begin WITH_TAINT_TRACKING
-                String dstr = new String(buf,offset,bytecount);             
+                String dstr = new String(buf,offset,byteCount);             
                 int tag = Taint.getTaintInt(value);
                 TaintLog.getInstance().logSSL(TaintLog.SSL_READ_ACTION, tag, fd, dstr);
                 if (tag == Taint.TAINT_CLEAR)
@@ -713,8 +714,10 @@ public class OpenSSLSocketImpl
         @Override
         public void write(int oneByte) throws IOException {
 // begin WITH_TAINT_TRACKING
+            /*
             int tag = Taint.getTaintInt(oneByte);
             FileDescriptor fd = socket.getFileDescriptor$();
+            
             if (tag != Taint.TAINT_CLEAR) {
                 String dstr = String.valueOf(oneByte);
                 // We only display at most Taint.dataBytesToLog characters in logcat of data
@@ -726,7 +729,7 @@ public class OpenSSLSocketImpl
                 String addr = (fd.hasName) ? fd.name : "unknown";
                 String tstr = "0x" + Integer.toHexString(tag);
                 Taint.log("SSLOutputStream.write(" + addr + ") received data with tag " + tstr + " data=[" + dstr + "]");
-            }
+            }*/
 // end WITH_TAINT_TRACKING
             Streams.writeSingleByte(this, oneByte);
         }
@@ -748,7 +751,7 @@ public class OpenSSLSocketImpl
                 int tag = Taint.getTaintByteArray(buf);
                 FileDescriptor fd = socket.getFileDescriptor$();
 
-                String dstr = new String(buf, offset, disLen);
+                String dstr = new String(buf, offset, byteCount);
                 TaintLog.getInstance().logSSL(TaintLog.SSL_WRITE_ACTION, tag, fd.getDescriptor(), dstr);
                 // replace non-printable characters
                 //dstr = dstr.replaceAll("\\p{C}", ".");
