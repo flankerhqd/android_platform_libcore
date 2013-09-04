@@ -676,7 +676,7 @@ public class OpenSSLSocketImpl
                 if (byteCount == 0) {
                     return 0;
                 }
-                int fd = socket.getFileDescriptor$();
+                FileDescriptor fd = socket.getFileDescriptor$();
                 int value =  NativeCrypto.SSL_read(sslNativePointer, fd,
                         OpenSSLSocketImpl.this, buf, offset, byteCount, getSoTimeout());
 // begin WITH_TAINT_TRACKING
